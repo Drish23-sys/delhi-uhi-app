@@ -44,7 +44,7 @@ def load_model():
     try:
         import requests, tempfile, os
 
-        MODEL_URL = "https://huggingface.co/Drishtanta23/delhi-uhi-xgboost/resolve/main/Delhi_UHI_XGB_Stage5.pkl"
+        MODEL_URL = "https://huggingface.co/Drishtanta23/delhi-uhi-xgboost/resolve/main/Delhi_UHI_XGB_Stage5_compressed.pkl"
 
         # download to temp file (cached by streamlit after first run)
         tmp_path = "/tmp/uhi_model.pkl"
