@@ -42,30 +42,22 @@ UHI_COLORS = ["#2196F3", "#FFC107", "#F44336"]
 @st.cache_resource(show_spinner="Loading XGBoost model…")
 def load_model():
     try:
-        from google.oauth2 import service_account
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaIoBaseDownload
+        import requests, tempfile, os
 
-        if "gcp_service_account" not in st.secrets:
-            st.error("❌ Missing secret: gcp_service_account")
-            st.stop()
-        if "model_file_id" not in st.secrets:
-            st.error("❌ Missing secret: model_file_id")
-            st.stop()
+        MODEL_URL = "https://huggingface.co/Drishtanta23/delhi-uhi-xgboost/resolve/main/Delhi_UHI_XGB_Stage5.pkl"
 
-        creds = service_account.Credentials.from_service_account_info(
-            dict(st.secrets["gcp_service_account"]),
-            scopes=["https://www.googleapis.com/auth/drive.readonly"]
-        )
-        service = build("drive", "v3", credentials=creds)
-        request = service.files().get_media(fileId=st.secrets["model_file_id"])
-        buf = io.BytesIO()
-        dl = MediaIoBaseDownload(buf, request)
-        done = False
-        while not done:
-            _, done = dl.next_chunk()
-        buf.seek(0)
-        return joblib.load(buf)
+        # download to temp file (cached by streamlit after first run)
+        tmp_path = "/tmp/uhi_model.pkl"
+
+        if not os.path.exists(tmp_path):
+            st.info("⬇️ Downloading model (first run only, ~400MB)…")
+            with requests.get(MODEL_URL, stream=True) as r:
+                r.raise_for_status()
+                with open(tmp_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+        return joblib.load(tmp_path)
 
     except Exception as e:
         st.error(f"❌ Model load failed: {e}")
