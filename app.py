@@ -73,12 +73,22 @@ def load_model():
 
 # ── feature engineering ──────────────────────
 def compute_features(bands):
-    b2  = bands["b2"].astype(float)
-    b3  = bands["b3"].astype(float)
-    b4  = bands["b4"].astype(float)
-    b5  = bands["b5"].astype(float)
-    b6  = bands["b6"].astype(float)
-    b7  = bands["b7"].astype(float)
+    # Landsat Collection 2 Level-2: DN → reflectance
+    # Formula: reflectance = DN * 0.0000275 - 0.2
+    def scale_sr(arr):
+        a = arr.astype(float)
+        fill = (a <= 1)          # fill/nodata pixels
+        a = a * 0.0000275 - 0.2
+        a = np.clip(a, 0, 1)
+        a[fill] = np.nan
+        return a
+
+    b2  = scale_sr(bands["b2"])
+    b3  = scale_sr(bands["b3"])
+    b4  = scale_sr(bands["b4"])
+    b5  = scale_sr(bands["b5"])
+    b6  = scale_sr(bands["b6"])
+    b7  = scale_sr(bands["b7"])
     eps = 1e-6
 
     NDVI   = (b5 - b4) / (b5 + b4 + eps)
@@ -123,10 +133,9 @@ def compute_features(bands):
     X = np.stack([f.ravel() for f in all_feats], axis=1)
 
     valid = (
-        (NDVI.ravel()   >= -1) & (NDVI.ravel()   <= 1) &
-        (NDBI.ravel()   >= -1) & (NDBI.ravel()   <= 1) &
-        (Albedo.ravel() >   0) & (Albedo.ravel() <  1) &
-        np.isfinite(X).all(axis=1)
+        np.isfinite(X).all(axis=1) &
+        (NDVI.ravel() >= -1) & (NDVI.ravel() <= 1) &
+        (NDBI.ravel() >= -1) & (NDBI.ravel() <= 1)
     )
     return X, valid, H, W
 
